@@ -1,0 +1,39 @@
+name: ES Docs Build and Deploy
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/event-sourcing/**"
+
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "The reason for running the workflow"
+        required: true
+        default: "Manual run"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@main
+
+      - name: Build
+        working-directory: ./docs/event-sourcing/
+        run: |
+          npm install
+          npm run build
+
+      - name: Deploy
+        working-directory: ./docs/event-sourcing/src/.vuepress/dist
+        run: |
+          git init .
+          git config --global user.name "CosmosEventSourcing"
+          git config --global user.email "billy.mumby@outlook.com"
+          git fetch https://github.com/mumby0168/cosmos-event-sourcing-docs.git
+          git checkout -b main
+          git add .
+          git commit -am "Deploy Documentation"
+          git push --force --set-upstream https://${{secrets.MUMBY0168_ACCESS_TOKEN}}:x-oauth-basic@github.com/mumby0168/cosmos-event-sourcing-docs.git main

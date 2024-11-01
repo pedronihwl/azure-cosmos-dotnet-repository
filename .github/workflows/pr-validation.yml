@@ -1,0 +1,36 @@
+name: pull request
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**.cs"
+      - "**.csproj"
+      - "!docs/**"
+
+jobs:
+  build:
+    name: build-${{matrix.os}}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@main
+      - name: Setup .NET
+        uses: actions/setup-dotnet@main
+        with:
+          dotnet-version: |
+            8.0.x
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: |
+          dotnet build --no-restore
+
+      - name: Test
+        run: |
+          dotnet test --no-restore --verbosity normal --filter "Category!=Acceptance"

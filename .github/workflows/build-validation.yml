@@ -1,0 +1,103 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.cs"
+      - "**.csproj"
+      - "**.yml"
+      - "!docs/**"
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "The reason for running the workflow"
+        required: true
+        default: "Manual run"
+
+# Only one instance of this build at a time.
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build-${{matrix.os}}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@main
+      - name: Setup .NET
+        uses: actions/setup-dotnet@main
+        with:
+          dotnet-version: |
+            8.0.x
+
+      - name: Install dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: |
+          dotnet build --configuration Release --no-restore
+
+      - name: Test
+        run: |
+          dotnet test --no-restore --verbosity normal --filter "Category!=Acceptance"
+
+  # acceptance-tests:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - uses: actions/checkout@main
+  #     - name: Setup .NET
+  #       uses: actions/setup-dotnet@main
+  #       with:
+  #         dotnet-version: |
+  #           8.0.x
+
+  #     - name: Install dependencies
+  #       run: dotnet restore
+
+  #     - name: Build
+  #       run: |
+  #         dotnet build --configuration Release --no-restore
+
+  #     - name: Prune databases
+  #       working-directory: ./tools/CosmosTestHelper
+  #       env:
+  #         CosmosConnectionString: ${{ secrets.COSMOS_INTEGRATION_TEST_CONNECTION_STRING }}
+  #       run: dotnet run
+
+  #     - name: Test Functions
+  #       env:
+  #         CosmosConnectionString: ${{ secrets.COSMOS_INTEGRATION_TEST_CONNECTION_STRING }}
+  #       run: |
+  #         dotnet test --no-restore --verbosity normal --filter "Category=Acceptance&Type!=Container&Type!=CosmosEventSourcing"
+
+  #     - name: Prune databases
+  #       working-directory: ./tools/CosmosTestHelper
+  #       env:
+  #         CosmosConnectionString: ${{ secrets.COSMOS_INTEGRATION_TEST_CONNECTION_STRING }}
+  #       run: dotnet run
+
+  #     - name: Test Cosmos Event Sourcing
+  #       env:
+  #         CosmosConnectionString: ${{ secrets.COSMOS_INTEGRATION_TEST_CONNECTION_STRING }}
+  #       run: |
+  #         dotnet test --no-restore --verbosity normal --filter "Category=Acceptance&Type=CosmosEventSourcing"
+
+  #     - name: Prune databases
+  #       working-directory: ./tools/CosmosTestHelper
+  #       env:
+  #         CosmosConnectionString: ${{ secrets.COSMOS_INTEGRATION_TEST_CONNECTION_STRING }}
+  #       run: dotnet run
+
+  #     - name: Test Container Creation
+  #       env:
+  #         CosmosConnectionString: ${{ secrets.COSMOS_INTEGRATION_TEST_CONNECTION_STRING }}
+  #       run: |
+  #         dotnet test --no-restore --verbosity normal --filter "Category=Acceptance&Type=Container"
